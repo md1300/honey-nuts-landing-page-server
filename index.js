@@ -36,7 +36,9 @@ async function run() {
 
     const orderCollection=client.db('honey-nuts').collection('customersOrder');
 
-app.get('/hussain',async(req,res)=>{
+app.get('/jabir/:email',async(req,res)=>{
+    const email=req.params.email 
+    const query={authorEmail:'email'}
     const cursor=orderCollection.find()
     const result=await cursor.toArray()
     res.send(result)
@@ -53,6 +55,14 @@ app.delete('/hussain/:id',async(req,res)=>{
     const query={_id:new ObjectId(id)}
     const result =await orderCollection.deleteOne(query)
     res.send(result)
+})
+
+// to see customer order -------------
+app.get('/myOrder/:email',async(req,res)=>{
+  const email=req.params.email;
+  const query={email}
+  const result=await orderCollection.find(query).toArray()
+  res.send(result) 
 })
 
     // Send a ping to confirm a successful connection
