@@ -93,39 +93,42 @@ app.get('/logout',(req,res)=>{
 
 
 
-app.get('/jabir/:email',async(req,res)=>{
+app.get('/jabir/:email',verifyToken,async(req,res)=>{
     const email=req.params.email 
-    const query={authorEmail:'email'}
-    const cursor=orderCollection.find()
-    const result=await cursor.toArray()
-    res.send(result)
+    const tokenEmail=req.user.email;
+    if(email!==tokenEmail.email){ 
+      return  res.status(403).send({message:'forbidden access'})
+    };
+    const query={authorEmail:'email'};
+    const cursor=orderCollection.find();
+    const result=await cursor.toArray();
+    res.send(result);
 })
 
 app.
     post('/hussain',async(req,res)=>{
     const collection=req.body;
     const result=await orderCollection.insertOne(collection);
-    res.send(result)
+    res.send(result);
 })
 
 app.delete('/hussain/:id',async(req,res)=>{
     const id=req.params.id;
-    const query={_id:new ObjectId(id)}
-    const result =await orderCollection.deleteOne(query)
-    res.send(result)
+    const query={_id:new ObjectId(id)};
+    const result =await orderCollection.deleteOne(query);
+    res.send(result);
 })
 
 // to see customer order -------------
 app.get('/myOrder/:email', verifyToken, async(req,res)=>{
   const email=req.params.email;
-  const tokenEmail=req.user.email;
-  
+  const tokenEmail=req.user.email; 
   if(email!==tokenEmail.email){ 
     return  res.status(403).send({message:'forbidden access'})
-  }
-  const query={email}
-  const result=await orderCollection.find(query).toArray()
-  res.send(result) 
+  };
+  const query={email};
+  const result=await orderCollection.find(query).toArray();
+  res.send(result) ;
 })
 
     // Send a ping to confirm a successful connection
