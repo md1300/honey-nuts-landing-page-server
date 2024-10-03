@@ -1,17 +1,48 @@
 const express=require('express');
-const cors=require('cors')
+const cors=require('cors');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app=express()
 const port=process.env.PORT||5000 ;
 
+const corsOptions={
+  origin:['http://localhost:5173','http://localhost:5174'],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials:true,
+  optionSuccessStatus:200,
+}
 
-app.use(cors())
+app.use(cors(corsOptions))
 app.use(express.json())
+app.use(cookieParser())
+
 
 app.get('/',(req,res)=>{
     res.send('this is server site homepage')
 })
+
+// create middleware to verify cookies -----------
+
+const verifyToken=(req,res,next)=>{
+  const token=req.cookies?.token;
+  
+  if(!token) return res.status(401).send({message:'unauthorized access'})
+  if(token){
+    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(error,decoded)=>{
+      if(error){
+        console.log(error)
+        return res.status(401).send({message:'unauthorized access'})
+      }
+      // console.log(decoded)
+      req.user=decoded ;
+      next()
+    })
+  }
+}
+
+
 
 // --------------------mongodb atlas-----------------------
 
@@ -36,6 +67,32 @@ async function run() {
 
     const orderCollection=client.db('honey-nuts').collection('customersOrder');
 
+// ------------- create jwt in  server  ---------------------------
+app.post('/jwt',(req,res)=>{
+    const email=req.body;
+    const token=jwt.sign({email},process.env.ACCESS_TOKEN_SECRET,{ expiresIn: '180d'})  
+    res.cookie('token',token ,{
+      httpOnly:true,
+      secure: process.env.NODE_ENV==='production',
+      sameSite: process.env.NODE_ENV==='production'?'none':'strict'
+    })
+    .send({success:true})
+})
+
+// ------------------clear cookies from server 
+
+app.get('/logout',(req,res)=>{
+  res.clearCookie('token',{
+    httpOnly:true,
+    secure:process.env.NODE_ENV==='production',
+    sameSite:process.env.NODE_ENV==='production'?'none':'strict',
+    maxAge:0
+  })
+  .send({success:true})
+})
+
+
+
 app.get('/jabir/:email',async(req,res)=>{
     const email=req.params.email 
     const query={authorEmail:'email'}
@@ -44,7 +101,8 @@ app.get('/jabir/:email',async(req,res)=>{
     res.send(result)
 })
 
-app.post('/hussain',async(req,res)=>{
+app.
+    post('/hussain',async(req,res)=>{
     const collection=req.body;
     const result=await orderCollection.insertOne(collection);
     res.send(result)
@@ -58,8 +116,13 @@ app.delete('/hussain/:id',async(req,res)=>{
 })
 
 // to see customer order -------------
-app.get('/myOrder/:email',async(req,res)=>{
+app.get('/myOrder/:email', verifyToken, async(req,res)=>{
   const email=req.params.email;
+  const tokenEmail=req.user.email;
+  
+  if(email!==tokenEmail.email){ 
+    return  res.status(403).send({message:'forbidden access'})
+  }
   const query={email}
   const result=await orderCollection.find(query).toArray()
   res.send(result) 
